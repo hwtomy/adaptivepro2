@@ -3,22 +3,24 @@
 % Problem Setup and Notation System
 % 
 
-% Optimal Linear Minumum Mean Square Error (LMMSE) Estimator 
-% ΣYY(n)theta_opt(n)=ΣYx(n) 
-% has a computational cost of O(n^3)
+% Optimal Linear Minumum Mean Square Error (LMMSE) Estimator of a statinary process
+% ΣYYtheta_opt=ΣYX 
+% When the underlying system changes with time 
+% MSE(n,theta) = E{(x(n)− x_hat(n))^2} where x_hat(n)=Y^{T}(n)theta
+% has a computational cost of O(N^3)
 
 % The Steepest-Descent Algorithm derived with Expected MSE
 % MSE(n,theta) = rxx(n,n) − 2theta^{T}ΣYx(n) + theta^{T}ΣYY(n)theta
 % theta_hat(n) = theta_hat(n−1) − μ/2*∂MSE(n,theta)/∂theta∣theta=theta_hat(n−1)
 % theta_hat(n) = theta_hat(n − 1) − μ{ΣYY(n)theta_hat(n − 1) − ΣYx(n)}
-% has a computational cost of O(n^2)
+% has a computational cost of O(N^2)
 
 % The Least Mean Square (LMS) Algorithm derived with instantaneous error
 % MSE_hat(n, theta) = {x(n) − theta^{T}Y(n)}^2
 % theta_hat(n) = theta_hat(n−1)−μ/2*∂MSE_hat(n,theta)/∂theta∣theta=theta_hat(n−1)
 % theta_hat(n) = theta_hat(n − 1) + μY(n)*{x(n) − x_hat(n)}
 % x_hat(n)=Y^{T}(n)theta_hat(n-1)
-% has a computational cost of O(n)
+% has a computational cost of O(N)
 
 % The Normalized LMS (NLMS) Algorithm has normalized step size
 % μ(n) = μ_bar/{c + ‖Y (n)‖_2Norm}
@@ -28,7 +30,7 @@
 % Σ_hat_RLS_Yx(n) = Y(n)x(n) + λΣ_hat_RLS_Yx(n − 1)
 % θ_hat_(n) = ˆθ(n − 1) +μInv{Σ_hat_RLS_YY(n)}
 %                       {Σ_hat_RLS_Yx(n)−Σ_hat_RLS_YY(n)θ_hat(n − 1)}
-% has a computational cost of O(n^3)
+% has a computational cost of O(N^3)
 
 
 clc;
