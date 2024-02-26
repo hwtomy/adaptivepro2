@@ -3,8 +3,8 @@
 % Problem Setup and Notation System
 % 
 
-% Optimal Linear Estimator 
-% ΣYY(n)θopt(n)=ΣYx(n) 
+% Optimal Linear Minumum Mean Square Error (LMMSE) Estimator 
+% ΣYY(n)theta_opt(n)=ΣYx(n) 
 % has a computational cost of O(n^3)
 
 % The Steepest-Descent Algorithm derived with Expected MSE
@@ -115,17 +115,17 @@ sv_adam = s-sn;
 %% Plotting
 figure; % Create a new figure
 
-plot(s, 'LineWidth', 1.5); % Plot original signal 
+%plot(s, 'LineWidth', 1.5); % Plot original signal 
 hold on; % Hold the current plot
 plot(sv_lms); 
 plot(sv_rls);
 plot(sv_nlms);
-plot(sv_adam);
+%plot(sv_adam);
 
 xlabel('Sample');
 ylabel('Amplitude');
 title('Comparison of Adaptive Filter Outputs');
-legend('Original Signal', 'LMS Output', 'RLS Output', 'NLMS Output'); 
+legend('Original Signal', 'LMS Output', 'RLS Output', 'NLMS Output', 'Adam Output'); 
 grid on; 
 
 
