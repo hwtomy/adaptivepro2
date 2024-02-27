@@ -2,12 +2,13 @@
 
 % System Model and Notation System
 % Measured signal: z(n) = s(n) + x(n)
-% where s(n) is the desired signal and x(n) is correlated with measurable disturbance y(n)
 % Estimation of desired signal: shat(n) = z(n) − xhat(n)
 % in this project we used Adaptive line Enhancer(ALE) to predict the noise
 % i.e. the desired signal is set to be a delayed version of the measured data.
 
-% In this project, we did not use 
+% This file is standalone file. Can be run without any supporting function.
+
+% Methods with System Identification
 
 % Optimal Linear Minumum Mean Square Error (LMMSE) Estimator of a statinary process
 % ΣYYtheta_opt=ΣYX 
@@ -20,6 +21,8 @@
 % theta_hat(n) = theta_hat(n−1) − μ/2*∂MSE(n,theta)/∂theta∣theta=theta_hat(n−1)
 % theta_hat(n) = theta_hat(n − 1) − μ{ΣYY(n)theta_hat(n − 1) − ΣYx(n)}
 % has a computational cost of O(N^2)
+
+% Methods without System Identification
 
 % The Least Mean Square (LMS) Algorithm derived with instantaneous error
 % MSE_hat(n, theta) = {x(n) − theta^{T}Y(n)}^2
@@ -34,7 +37,7 @@
 % The Recursive Least Square (RLS) Algorithm
 % Σ_hat_RLS_YY(n) = Y(n)Y^T(n) + λΣ_hat_RLS_YY(n − 1)
 % Σ_hat_RLS_Yx(n) = Y(n)x(n) + λΣ_hat_RLS_Yx(n − 1)
-% θ_hat_(n) = ˆθ(n − 1) +μInv{Σ_hat_RLS_YY(n)}
+% thetahat_RL(n) = ˆθ(n − 1) +μInv{Σ_hat_RLS_YY(n)}
 %                       {Σ_hat_RLS_Yx(n)−Σ_hat_RLS_YY(n)θ_hat(n − 1)}
 % has a computational cost of O(N^3)
 
@@ -42,131 +45,100 @@
 clc;
 clear all;
 clc;
-
-[z,fs]=audioread("EQ2401Project2data2024.wav");
-
+% Read data
+%[z,fs]=audioread("EQ2401Project2data2024.wav");
+[z,fs]=audioread('rls.wav');
 % set the filter parameters
-mu_lms = 0.001;
-N = 512;
+mu_lms = 0.003;
+mu_nlms = 0.25;
+N = 500;
 M = length(z);
-xhat_lms = zeros(M, 1);
-xhat_rls = zeros(M,1); 
-thetahat_lms = zeros(N,M+1);
-thetahat_rls =  zeros(N,M+1);
 D = 0;
 delay = dsp.Delay(D);
 x= delay(z);
 P = .05*eye(N);
-lambda = 0.999999;
+lambda = 0.9999999;
+c = 1e-9;
 
+%Initiate data structure
+xhat_lms = zeros(M, 1);
+xhat_nlms = zeros(M, 1);
+xhat_rls = zeros(M,1);
+%from i to N-1, there is no filtering
+for i = 1:N-1
+    xhat_lms(i)=z(i);
+    xhat_nlms(i)=z(i);
+    xhat_rls(i)=z(i);
+end
+mu_nlms = zeros(M,1);
+thetahat_lms = zeros(N,M+1);
+thetahat_nlms = zeros(N,M+1);
+thetahat_rls =  zeros(N,M+1);
+
+% Filtering
 for n = N:M
     % Y (n) = [y(n), y(n − 1), . . . , y(n − N + 1)]T 
     Y_n = z(n:-1:n-N+1);
 
     %%LMS
     xhat_lms(n) = Y_n' * thetahat_lms(:, n-1);  
-    % thetahat(n) = thetahat(n − 1) + μY(n){x(n) − xhat(n)}
     thetahat_lms(:, n) = thetahat_lms(:, n-1) + mu_lms * Y_n * (x(n) - xhat_lms(n));
+
+    %%NLMS
+    xhat_nlms(n) = Y_n' * thetahat_lms(:, n-1); 
+    % μ(n) = μ_bar/{c + ‖Y(n)‖_2Norm}
+    mu_nlms(n) = mu_nlms/(c+Y_n'*Y_n);
+    thetahat_nlms(:,n) = thetahat_nlms(:,n-1) + mu_nlms(n) *Y_n*(x(n)- xhat_nlms(n)); 
 
     %%RLS
     xhat_rls(n) = Y_n' * thetahat_rls(:,n-1);
-    % Update K
     K=P*Y_n/(lambda+Y_n'*P*Y_n);
-    % Update P
     P=1/lambda*(P-K*Y_n'*P);
-    % Update the n+1 row in the matrix thetahat which in the 
     thetahat_rls(:,n)=thetahat_rls(:,n-1)+K*(x(n)-xhat_rls(n));
 
 end
 
-s_lms = z-xhat_lms;
-s_rls = z-xhat_rls;
-soundsc(s_rls, fs);
-audiowrite('lms.wav', s_lms,fs);
-audiowrite('rls.wav', s_rls,fs);
+% Store data
+shat_lms = z-xhat_lms;
+shat_nlms = z-xhat_nlms;
+shat_rls = z-xhat_rls;
+soundsc(shat_nlms, fs);
+audiowrite('lms.wav', shat_lms,fs);
+audiowrite('nlms.wav', shat_nlms,fs);
+audiowrite('rls.wav', shat_rls,fs);
 
-
-
-% Find the index of the most significant coefficient for both LMS and SD
-[~, index_lms] = max(abs(thetahat_lms(:, end)));
-[~, index_sd] = max(abs(thetahat_rls(:, end)));
-
-% Plot time evolution of the most significant coefficient
-figure; % Create a new figure for the plot
-hold on; % Allow multiple plots on the same figure
-
-% Plot for LMS
-plot(thetahat_lms(index_lms, :), 'DisplayName', sprintf('LMS Coeff %d', index_lms), LineWidth=2); 
-
-% Plot for Steepest Descent
-plot(thetahat_rls(index_sd, :), 'DisplayName', sprintf('RLS Coeff %d', index_sd)); 
-
-hold off; % Stop overplotting
+% Plot
+figure; 
+hold on; 
+for i=1:10
+    % Plot for LMS
+    plot(thetahat_lms(i, :), 'Color','red'); 
+    % Plot for NLMS
+    plot(thetahat_nlms(i, :), 'Color','green'); 
+    % Plot for RLS
+    plot(thetahat_rls(i, :), 'Color','blue'); 
+end
+hLMS = plot(NaN,NaN,'Color','red', 'LineWidth',2);
+hNLMS = plot(NaN,NaN,'Color','green');
+hRLS = plot(NaN,NaN,'Color','blue');
+legend([hLMS, hNLMS, hRLS], {'LMS', 'NLMS', 'RLS'});
+hold off;
 xlabel('Time (Sample)');
 ylabel('Theta Value');
-title('Comparison of the Most Significant Theta Coefficient for LMS and RLS');
-legend('show');
+title('Comparison of the Most Significant Theta Coefficient for LMS, NLMS, and RLS');
 
-
-
-
-
-
-
-%%nlms
-mu = 0.999; 
-order = 512;
-w = nlms(z,x,mu,order);
-sn=transpose(z(1:order-1));
-for i=order:length(s)
-    sn1 = z(i:-1:i-order+1)'*w(:,i-1);
-    sn=[sn,sn1];
-end
-sn = sn';
-sv_nlms = z-sn;
-% soundsc(sv,fs);
-
-%%adagradelsm
-% mu = 0.05; 
-% order = 256;
-% w = adag(s,x,mu,order);
-% sn=transpose(s(1:order-1));
-% for i=order:length(s)
-%     sn1 = s(i:-1:i-order+1)'*w(:,i-1);
-%     sn=[sn,sn1];
-% end
-% sn = sn';
-% sv = s-sn;
-% soundsc(sv,fs);
-
-%%adamlsm
-mu = 0.8; 
-b1 = 0.2;
-b2 = 0.0000001;
-order = 256;
-w = adam(z,x,mu,order,b1,b2);
-sn=transpose(z(1:order-1));
-for i=order:length(s)
-    sn1 = z(i:-1:i-order+1)'*w(:,i-1);
-    sn=[sn,sn1];
-end
-sn = sn';
-sv_adam = z-sn;
-%soundsc(sv,fs);
-
-
-%%Plotting
-figure; % Create a new figure
-
-plot(z, 'LineWidth', 1.5); % Plot original signal 
-hold on; % Hold the current plot
-plot(sv_lms); 
-plot(sv_rls);
-plot(sv_nlms);
-%plot(sv_adam);
-
+figure; 
+%plot(z, 'LineWidth', 1.5);
+hold on;
+plot(shat_lms, 'LineWidth', 3);
+plot(shat_nlms);
+plot(shat_rls);
 xlabel('Sample');
 ylabel('Amplitude');
 title('Comparison of Adaptive Filter Outputs');
-legend('Original Signal', 'LMS Output', 'RLS Output', 'NLMS Output', 'Adam Output'); 
+legend('LMS Output', 'NLMS Output', 'RLS Output'); 
 grid on; 
+
+figure;
+plot(mu_nlms);
+x
