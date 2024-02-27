@@ -2,6 +2,7 @@ function w=rls(s,x,mu,order)
 
 N = length(s);
 P = .05*eye(order);
+%P=1e4*eye(order);
 lambda = 0.999999;
 w = zeros(order, N);
 
