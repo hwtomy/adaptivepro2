@@ -1,7 +1,10 @@
 % Project2 of Tiou Wang and Liping Bai
 
-% Problem Setup and Notation System
-% 
+% System Model and Notation System
+% Measured signal: z(n) = s(n) + x(n)
+% where s(n) is the desired signal and x(n) is correlated with disturbance y(n)
+% in this project we Adaptive line enhancer to predict a periodic noise in the observation. 
+% The input of the adaptive filter is delayed history of observed/target data.
 
 % Optimal Linear Minumum Mean Square Error (LMMSE) Estimator of a statinary process
 % ΣYYtheta_opt=ΣYX 
@@ -37,59 +40,86 @@ clc;
 clear all;
 clc;
 
-[y,fs]=audioread("EQ2401Project2data2024.wav");
-[s_additional, fs]=audioread("EQ2401Project2_bonus_task2024.wav");
-% plot(periodogram(s,hanning(length(s)), fs));
+[z,fs]=audioread("EQ2401Project2data2024.wav");
 
+% set the filter parameters
+mu_lms = 0.001;
+mu_sd = 0.001; 
+N = 300;
+M = length(z);
+xhat_lms = zeros(M, 1);
+xhat_sd = zeros(M,1); 
+thetahat_lms = zeros(N,M+1);
+thetahat_sd =  zeros(N,M+1);
+delay = 0; 
+plotinterval = 81;
 
-%%lms
-mu = 0.01; 
-N = 256;
-ga = 0.1;
-%w = lms(s,x,mu,order);
-w = zeros(N, length(y));
-r = zeros(1,length(y));
+for n = N+delay:M   
+    Y_n = z(n:-1:n-N+1);
+    % xhat(n) = Y^{T}(n)thetahat(n-1) 
+    xhat_lms(n) = Y_n' * thetahat_lms(:, n-1);  
+    % thetahat(n) = thetahat(n − 1) + μY(n){x(n) − xhat(n)}
+    thetahat_lms(:, n) = thetahat_lms(:, n-1) + mu_lms * Y_n * (z(n-delay) - xhat_lms(n));
 
-for n = order:N
-    s_n = s(n:-1:n-order+1);
-     r(n) = x(n)- transpose(s_n)*w(:,n-1);
-     w(:,n) = w(:,n-1)+mu*s_n*(r(n));  
-
+    %Steepest descent
+    % theta_hat(n) = theta_hat(n − 1) − μ{ΣYY(n)theta_hat(n − 1) − ΣYx(n)}
+    SigmaYY = Y_n * Y_n'; % this is a N by N matrix
+    SigmaYx = Y_n * z(n-delay); 
+    xhat_sd(n) = Y_n'*thetahat_sd(:,n-1);
+    thetahat_sd(:,n) = thetahat_sd(:,n-1) - mu_sd*(SigmaYY*thetahat_sd(:,n-1) - SigmaYx); 
 end
 
-sn=transpose(s(1:order-1));
-for i=order:length(s)
-    sn1 = s(i:-1:i-order+1)'*w(:,i-1);
-    sn=[sn,sn1];
-end
-sn = sn';
-sv_lms = s-sn;
-% soundsc(sv,fs);
+sv_lms = z-xhat_lms;
+sv_sd = z-xhat_sd;
+soundsc(sv_sd, fs);
+audiowrite('lms.wav', sv_lms,fs);
+
+
+% Find the index of the most significant coefficient for both LMS and SD
+[~, index_lms] = max(abs(thetahat_lms(:, end)));
+[~, index_sd] = max(abs(thetahat_sd(:, end)));
+
+% Plot time evolution of the most significant coefficient
+figure; % Create a new figure for the plot
+hold on; % Allow multiple plots on the same figure
+
+% Plot for LMS
+plot(thetahat_lms(index_lms, :), 'DisplayName', sprintf('LMS Coeff %d', index_lms), LineWidth=2); 
+
+% Plot for Steepest Descent
+plot(thetahat_sd(index_sd, :), 'DisplayName', sprintf('SD Coeff %d', index_sd)); 
+
+hold off; % Stop overplotting
+xlabel('Time (Sample)');
+ylabel('Theta Value');
+title('Comparison of the Most Significant Theta Coefficient for LMS and Steepest Descent');
+legend('show');
+
 
 %%rls
 mu = 0.6; 
 order = 512;
-w = rls(s,x,mu,order);
-sn=transpose(s(1:order-1));
+w = rls(z,x,mu,order);
+sn=transpose(z(1:order-1));
 for i=order:length(s)
-    sn1 = s(i:-1:i-order+1)'*w(:,i-1);
+    sn1 = z(i:-1:i-order+1)'*w(:,i-1);
     sn=[sn,sn1];
 end
 sn = sn';
-sv_rls = s-sn;
+sv_rls =z-sn;
 % soundsc(sv,fs);
 
 %%nlms
 mu = 0.999; 
 order = 512;
-w = nlms(s,x,mu,order);
-sn=transpose(s(1:order-1));
+w = nlms(z,x,mu,order);
+sn=transpose(z(1:order-1));
 for i=order:length(s)
-    sn1 = s(i:-1:i-order+1)'*w(:,i-1);
+    sn1 = z(i:-1:i-order+1)'*w(:,i-1);
     sn=[sn,sn1];
 end
 sn = sn';
-sv_nlms = s-sn;
+sv_nlms = z-sn;
 % soundsc(sv,fs);
 
 %%adagradelsm
@@ -110,21 +140,21 @@ mu = 0.8;
 b1 = 0.2;
 b2 = 0.0000001;
 order = 256;
-w = adam(s,x,mu,order,b1,b2);
-sn=transpose(s(1:order-1));
+w = adam(z,x,mu,order,b1,b2);
+sn=transpose(z(1:order-1));
 for i=order:length(s)
-    sn1 = s(i:-1:i-order+1)'*w(:,i-1);
+    sn1 = z(i:-1:i-order+1)'*w(:,i-1);
     sn=[sn,sn1];
 end
 sn = sn';
-sv_adam = s-sn;
+sv_adam = z-sn;
 %soundsc(sv,fs);
 
 
-%% Plotting
+%%Plotting
 figure; % Create a new figure
 
-%plot(s, 'LineWidth', 1.5); % Plot original signal 
+plot(z, 'LineWidth', 1.5); % Plot original signal 
 hold on; % Hold the current plot
 plot(sv_lms); 
 plot(sv_rls);
@@ -136,8 +166,3 @@ ylabel('Amplitude');
 title('Comparison of Adaptive Filter Outputs');
 legend('Original Signal', 'LMS Output', 'RLS Output', 'NLMS Output', 'Adam Output'); 
 grid on; 
-
-
-
-
-
