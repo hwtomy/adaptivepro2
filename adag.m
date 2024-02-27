@@ -1,4 +1,7 @@
 function w = adag(s,x,mu,order)
+%%This function is the  least mean square algorithm using adagrad to update
+%%learning rate. The core is introducing second moment of gradient to
+%%reflect the changes.
 N = length(s);
 w = zeros(order, N);
 r = zeros(1,N);
@@ -12,6 +15,6 @@ for n = order:N
      learning = mu./(sqrt(G)+e);
 
      w(:,n) = w(:,n-1)-(learning.*grad)';  
-
 end
+
 end

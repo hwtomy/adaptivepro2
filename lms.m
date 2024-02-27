@@ -1,4 +1,5 @@
 function w = lms(s,x,mu,order)
+%%This function is the standard least mean square algorithm
 N = length(s);
 w = zeros(order, N);
 r = zeros(1,N);
@@ -9,6 +10,7 @@ for n = order:N
 
      w(:,n) = w(:,n-1)+mu*s_n*(r(n));  
 end
+
 end
 
 

@@ -9,9 +9,8 @@ delay = dsp.Delay(D);
 x = delay(s);
 
 %%lsm
-mu = 0.01; 
+mu = 0.01; %learning rate
 order = 256;
-ga = 0.1;
 w = lms(s,x,mu,order);
 sn=transpose(s(1:order-1));
 for i=order:length(s)
@@ -24,7 +23,8 @@ audiowrite('lms.wav', sv,fs);
 
 %%rls
 order = 512;
-w = rls(s,x,order);
+lambda = 0.999999;%decay rate
+w = rls(s,x,order, lambda);
 sn=transpose(s(1:order-1));
 for i=order:length(s)
     sn1 = s(i:-1:i-order+1)'*w(:,i-1);
@@ -60,7 +60,6 @@ sn = sn';
 sv = s-sn;
 audiowrite('momentumlms.wav', sv,fs);
 
-
 %%adagradelsm
 mu = 0.05; 
 order = 256;
@@ -76,8 +75,8 @@ audiowrite('adagradelms.wav', sv,fs);
 
 %%adamlsm
 mu = 0.8; 
-b1 = 0.2;
-b2 = 0.0000001;
+b1 = 0.2;%decay rate of the first moment
+b2 = 0.0000001;%decay rate of the second moment
 order = 256;
 w = adam(s,x,mu,order,b1,b2);
 sn=transpose(s(1:order-1));
