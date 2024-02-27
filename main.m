@@ -19,7 +19,7 @@ for i=order:length(s)
 end
 sn = sn';
 sv = s-sn;
-audiowrite('lms.wav', sv,fs);
+audiowrite('lms1.wav', sv,fs);
 
 %%rls
 order = 512;
@@ -47,10 +47,12 @@ sn = sn';
 sv = s-sn;
 audiowrite('nlms.wav', sv,fs);
 
+
 %%momentumlsm
-mu = 0.05; 
+mu = 0.01; 
 order = 256;
-w = mlms(s,x,mu,order);
+ga = 0.8;%decay rate
+w = mlms(s,x,mu,order,ga);
 sn=transpose(s(1:order-1));
 for i=order:length(s)
     sn1 = s(i:-1:i-order+1)'*w(:,i-1);
