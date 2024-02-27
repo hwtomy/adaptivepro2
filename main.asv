@@ -23,6 +23,7 @@ sv = s-sn;
 audiowrite('lms.wav', sv,fs);
 
 %%rls
+mu = 0.6; 
 order = 512;
 w = rls(s,x,order);
 sn=transpose(s(1:order-1));
@@ -33,7 +34,7 @@ end
 sn = sn';
 sv = s-sn;
 audiowrite('rls.wav', sv,fs);
-
+% 
 %%nlsm
 mu = 0.999; 
 order = 512;
@@ -47,18 +48,6 @@ sn = sn';
 sv = s-sn;
 audiowrite('nlms.wav', sv,fs);
 
-%%momentumlsm
-mu = 0.05; 
-order = 256;
-w = mlms(s,x,mu,order);
-sn=transpose(s(1:order-1));
-for i=order:length(s)
-    sn1 = s(i:-1:i-order+1)'*w(:,i-1);
-    sn=[sn,sn1];
-end
-sn = sn';
-sv = s-sn;
-audiowrite('momentumlms.wav', sv,fs);
 
 
 %%adagradelsm

@@ -6,6 +6,7 @@ e = 1e-9;
 g1 = zeros(1,order);
 g2 = zeros(1,order);
 t= 0;
+
 for n = order:N
     s_n = s(n:-1:n-order+1);
      r(n) = x(n)- transpose(s_n)*w(:,n-1);
