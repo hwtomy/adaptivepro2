@@ -7,6 +7,8 @@
 % in this project we used Adaptive line Enhancer(ALE) to predict the noise
 % i.e. the desired signal is set to be a delayed version of the measured data.
 
+% In this project, we did not use 
+
 % Optimal Linear Minumum Mean Square Error (LMMSE) Estimator of a statinary process
 % ΣYYtheta_opt=ΣYX 
 % When the underlying system changes with time n
@@ -45,40 +47,48 @@ clc;
 
 % set the filter parameters
 mu_lms = 0.001;
-mu_sd = 0.001; 
-N = 300;
+N = 512;
 M = length(z);
 xhat_lms = zeros(M, 1);
-xhat_sd = zeros(M,1); 
+xhat_rls = zeros(M,1); 
 thetahat_lms = zeros(N,M+1);
-thetahat_sd =  zeros(N,M+1);
-delay = 0; 
-
-for n = N+delay:M
+thetahat_rls =  zeros(N,M+1);
+D = 0;
+delay = dsp.Delay(D);
+x= delay(z);
+P = .05*eye(N);
+lambda = 0.999999;
+for n = N:M
     % Y (n) = [y(n), y(n − 1), . . . , y(n − N + 1)]T 
     Y_n = z(n:-1:n-N+1);
-    % xhat(n) = Y^{T}(n)thetahat(n-1) 
+
+    %%LMS
     xhat_lms(n) = Y_n' * thetahat_lms(:, n-1);  
     % thetahat(n) = thetahat(n − 1) + μY(n){x(n) − xhat(n)}
-    thetahat_lms(:, n) = thetahat_lms(:, n-1) + mu_lms * Y_n * (z(n-delay) - xhat_lms(n));
+    thetahat_lms(:, n) = thetahat_lms(:, n-1) + mu_lms * Y_n * (x(n) - xhat_lms(n));
 
-    %Steepest descent
-    % theta_hat(n) = theta_hat(n − 1) − μ{ΣYY(n)theta_hat(n − 1) − ΣYx(n)}
-    SigmaYY = Y_n * Y_n'; % this is a N by N matrix
-    SigmaYx = Y_n * z(n-delay); 
-    xhat_sd(n) = Y_n'*thetahat_sd(:,n-1);
-    thetahat_sd(:,n) = thetahat_sd(:,n-1) - mu_sd*(SigmaYY*thetahat_sd(:,n-1) - SigmaYx); 
+    %%RLS
+    xhat_rls(n) = Y_n' * thetahat_rls(:,n-1);
+    % Update K
+    K=P*Y_n/(lambda+Y_n'*P*Y_n);
+    % Update P
+    P=1/lambda*(P-K*Y_n'*P);
+    % Update the n+1 row in the matrix thetahat which in the 
+    thetahat_rls(:,n)=thetahat_rls(:,n-1)+K*(x(n)-xhat_rls(n));
+
 end
 
 s_lms = z-xhat_lms;
-s_sd = z-xhat_sd;
-soundsc(s_sd, fs);
+s_rls = z-xhat_rls;
+soundsc(s_rls, fs);
 audiowrite('lms.wav', s_lms,fs);
+audiowrite('rls.wav', s_rls,fs);
 
 
-% Find the index of the most significant coefficient for both LMS and SD
+
+% Find the index of the most significant coefficient for both LMS and RLS
 [~, index_lms] = max(abs(thetahat_lms(:, end)));
-[~, index_sd] = max(abs(thetahat_sd(:, end)));
+[~, index_sd] = max(abs(thetahat_rls(:, end)));
 
 % Plot time evolution of the most significant coefficient
 figure; % Create a new figure for the plot
@@ -87,28 +97,20 @@ hold on; % Allow multiple plots on the same figure
 % Plot for LMS
 plot(thetahat_lms(index_lms, :), 'DisplayName', sprintf('LMS Coeff %d', index_lms), LineWidth=2); 
 
-% Plot for Steepest Descent
-plot(thetahat_sd(index_sd, :), 'DisplayName', sprintf('SD Coeff %d', index_sd)); 
+% Plot for RLS
+plot(thetahat_rls(index_sd, :), 'DisplayName', sprintf('RLS Coeff %d', index_sd)); 
 
 hold off; % Stop overplotting
 xlabel('Time (Sample)');
 ylabel('Theta Value');
-title('Comparison of the Most Significant Theta Coefficient for LMS and Steepest Descent');
+title('Comparison of the Most Significant Theta Coefficient for LMS and RLS');
 legend('show');
 
 
-%%rls
-mu = 0.6; 
-order = 512;
-w = rls(z,x,mu,order);
-sn=transpose(z(1:order-1));
-for i=order:length(s)
-    sn1 = z(i:-1:i-order+1)'*w(:,i-1);
-    sn=[sn,sn1];
-end
-sn = sn';
-sv_rls =z-sn;
-% soundsc(sv,fs);
+
+
+
+
 
 %%nlms
 mu = 0.999; 
