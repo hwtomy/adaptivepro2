@@ -14,6 +14,7 @@ clc;
 % Read data
 [z,fs]=audioread("EQ2401Project2data2024.wav");
 %[z,fs]=audioread("EQ2401Project2_bonus_task2024.wav");
+
 % set the filter parameters
 mu_lms = 0.004;
 mu_bar = 0.25;
